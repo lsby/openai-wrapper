@@ -210,10 +210,10 @@ export class OpenAI实例 {
   /**
    * let 管理器 = new OpenAI管理器()
    * let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-   * let 结果 = await 实例.阻塞调用({ messages: messages })
+   * let 结果 = await 实例.调用({ messages: messages })
    * console.log({ 最终结果: 结果 })
    */
-  async 阻塞调用(opt: 聊天选项): Promise<string> {
+  async 调用(opt: 聊天选项): Promise<string> {
     let 流式调用 = new OpenAI流式调用(randomUUID(), this.AI_KEY, this.AI_BASE_URL, this.AI_MODEL)
     let 结果 = ''
     await 流式调用.开始流式调用(opt, async (data) => {
