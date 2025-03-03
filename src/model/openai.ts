@@ -229,8 +229,8 @@ export class OpenAI实例 {
    * console.log({ 最终结果: 结果 })
    */
   async 可控调用<输出类型描述 extends 数据描述>(
-    提示词: ChatCompletionMessageParam[],
     输出数据描述: 输出类型描述,
+    提示词: ChatCompletionMessageParam[],
     选项?: {
       引导前缀?: string | undefined
       最大长度?: number | undefined
@@ -248,15 +248,15 @@ export class OpenAI实例 {
    * console.log(结果)
    */
   async 提问<输出类型描述 extends z.ZodString | z.ZodNumber | z.ZodBoolean | z.ZodEnum<[string, ...string[]]>>(
-    提示词: ChatCompletionMessageParam[],
     输出类型: 输出类型描述,
+    提示词: ChatCompletionMessageParam[],
     选项?: {
       引导前缀?: string | undefined
       最大长度?: number | undefined
       停止字符串?: string[] | undefined
     },
   ): Promise<z.infer<输出类型描述>> {
-    return (await this.可控调用(提示词, z.object({ answer: 输出类型 }), { 引导前缀: `{"answer": `, ...选项 }))
+    return (await this.可控调用(z.object({ answer: 输出类型 }), 提示词, { 引导前缀: `{"answer": `, ...选项 }))
       .answer as any
   }
 
@@ -320,7 +320,7 @@ export class OpenAI实例 {
    * )
    * console.log(结果)
    */
-  async 结构化输出<形状 extends z.AnyZodObject>(opt: 聊天选项, 形状: 形状, 名称: string): Promise<z.infer<形状>> {
+  async 结构化输出<形状 extends z.AnyZodObject>(形状: 形状, opt: 聊天选项, 名称: string): Promise<z.infer<形状>> {
     let response = await this.openai.beta.chat.completions.parse({
       ...opt,
       model: this.AI_MODEL,

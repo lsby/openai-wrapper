@@ -46,14 +46,14 @@ test('阻塞调用', async () => {
 test('可控调用', async () => {
   let 管理器 = new OpenAI管理器()
   let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-  let 结果 = await 实例.可控调用(messages, z.object({ result: z.string() }))
+  let 结果 = await 实例.可控调用(z.object({ result: z.string() }), messages)
   console.log(结果)
 })
 
 test('提问', async () => {
   let 管理器 = new OpenAI管理器()
   let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-  let 结果 = await 实例.提问([{ role: 'user', content: '1和2谁大' }], z.enum(['1大', '2大']))
+  let 结果 = await 实例.提问(z.enum(['1大', '2大']), [{ role: 'user', content: '1和2谁大' }])
   console.log(结果)
 })
 
@@ -86,12 +86,6 @@ test('结构化输出', async function () {
   let 管理器 = new OpenAI管理器()
   let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
   let 结果 = await 实例.结构化输出(
-    {
-      messages: [
-        { role: 'system', content: 'You are a helpful math tutor. Guide the user through the solution step by step.' },
-        { role: 'user', content: 'how can I solve 8x + 7 = -23' },
-      ],
-    },
     z.object({
       steps: z.array(
         z.object({
@@ -101,6 +95,12 @@ test('结构化输出', async function () {
       ),
       final_answer: z.string(),
     }),
+    {
+      messages: [
+        { role: 'system', content: 'You are a helpful math tutor. Guide the user through the solution step by step.' },
+        { role: 'user', content: 'how can I solve 8x + 7 = -23' },
+      ],
+    },
     'math_reasoning',
   )
   console.log(结果)
