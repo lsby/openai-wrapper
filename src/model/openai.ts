@@ -35,6 +35,7 @@ export interface 计算嵌入选项 {
   dimensions?: number
 }
 export type 数据描述 = z.AnyZodObject | z.ZodUnion<any>
+export type 提问数据描述 = z.ZodString | z.ZodNumber | z.ZodBoolean | z.ZodEnum<[string, ...string[]]>
 
 export class 嵌入 {
   static 半序列化(输入: 嵌入): number[] {
@@ -247,7 +248,7 @@ export class OpenAI实例 {
    * let 结果 = await 实例.提问([{ role: 'user', content: '1和2谁大' }], z.enum(['1', '2']))
    * console.log(结果)
    */
-  async 提问<输出类型描述 extends z.ZodString | z.ZodNumber | z.ZodBoolean | z.ZodEnum<[string, ...string[]]>>(
+  async 提问<输出类型描述 extends 提问数据描述>(
     输出类型: 输出类型描述,
     提示词: ChatCompletionMessageParam[],
     选项?: {
