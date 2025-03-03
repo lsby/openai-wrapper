@@ -13,7 +13,7 @@ import { z } from 'zod'
 import { printNode, zodToTs } from 'zod-to-ts'
 import { Global } from '../global/global.js'
 
-interface 聊天选项 {
+export interface 聊天选项 {
   messages: ChatCompletionMessageParam[]
   maxTokens?: number
   temperature?: number
@@ -21,7 +21,7 @@ interface 聊天选项 {
   presencePenalty?: number
   stop?: string[]
 }
-interface 函数调用选项 {
+export interface 函数调用选项 {
   messages: ChatCompletionMessageParam[]
   tools: ChatCompletionTool[]
   tool_choice: 'auto' | ChatCompletionToolChoiceOption
@@ -30,11 +30,11 @@ interface 函数调用选项 {
   frequencyPenalty?: number
   presencePenalty?: number
 }
-interface 计算嵌入选项 {
+export interface 计算嵌入选项 {
   input: string
   dimensions?: number
 }
-type 数据描述 = z.AnyZodObject | z.ZodUnion<any>
+export type 数据描述 = z.AnyZodObject | z.ZodUnion<any>
 
 export class 嵌入 {
   static 半序列化(输入: 嵌入): number[] {
