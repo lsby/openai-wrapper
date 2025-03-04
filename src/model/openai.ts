@@ -260,7 +260,7 @@ export class OpenAI实例 {
     return (
       await this.可控调用(z.object({ answer: 输出类型 }), 提示词, {
         ...选项,
-        引导前缀: `{"answer": "${选项?.引导前缀 ?? ''}`,
+        引导前缀: `{"answer": ${选项?.引导前缀 === void 0 ? '' : `"${选项.引导前缀}`}`,
       })
     ).answer as any
   }
