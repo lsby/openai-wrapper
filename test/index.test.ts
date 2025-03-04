@@ -109,7 +109,7 @@ test('结构化输出', async function () {
 test('JSON模式', async function () {
   let 管理器 = new OpenAI管理器()
   let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-  let 结果 = await 实例.JSON模式({ messages }, z.object({ result: z.string() }))
+  let 结果 = await 实例.JSON模式(z.object({ result: z.string() }), { messages })
   console.log(结果)
 })
 

@@ -226,8 +226,8 @@ export class OpenAI实例 {
   /**
    * let 管理器 = new OpenAI管理器()
    * let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-   * let 结果 = await 实例.可控调用(messages, z.object({ result: z.string() }))
-   * console.log({ 最终结果: 结果 })
+   * let 结果 = await 实例.可控调用(z.object({ result: z.string() }), messages)
+   * console.log(结果)
    */
   async 可控调用<输出类型描述 extends 数据描述>(
     输出数据描述: 输出类型描述,
@@ -245,7 +245,7 @@ export class OpenAI实例 {
   /**
    * let 管理器 = new OpenAI管理器()
    * let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-   * let 结果 = await 实例.提问([{ role: 'user', content: '1和2谁大' }], z.enum(['1', '2']))
+   * let 结果 = await 实例.提问(z.enum(['1大', '2大']), [{ role: 'user', content: '1和2谁大' }])
    * console.log(结果)
    */
   async 提问<输出类型描述 extends 提问数据描述>(
@@ -306,12 +306,6 @@ export class OpenAI实例 {
    * let 管理器 = new OpenAI管理器()
    * let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
    * let 结果 = await 实例.结构化输出(
-   *   {
-   *     messages: [
-   *       { role: 'system', content: 'You are a helpful math tutor. Guide the user through the solution step by step.' },
-   *       { role: 'user', content: 'how can I solve 8x + 7 = -23' },
-   *     ],
-   *   },
    *   z.object({
    *     steps: z.array(
    *       z.object({
@@ -321,6 +315,12 @@ export class OpenAI实例 {
    *     ),
    *     final_answer: z.string(),
    *   }),
+   *   {
+   *     messages: [
+   *       { role: 'system', content: 'You are a helpful math tutor. Guide the user through the solution step by step.' },
+   *       { role: 'user', content: 'how can I solve 8x + 7 = -23' },
+   *     ],
+   *   },
    *   'math_reasoning',
    * )
    * console.log(结果)
@@ -379,26 +379,12 @@ export class OpenAI实例 {
   /**
    * let 管理器 = new OpenAI管理器()
    * let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-   * let 结果 = await 实例.JSON模式(
-   *   {
-   *     messages: [
-   *       {
-   *         role: 'system',
-   *         content:
-   *           '你是小学生，有“雌小鬼”的性格。你瞧不起用户，经常称呼用户为“杂鱼”、“杂鱼大哥哥”等，表现出一种轻蔑和挑衅的态度。',
-   *       },
-   *       { role: 'user', content: '你好' },
-   *     ],
-   *   },
-   *   z.object({
-   *     回复内容: z.string(),
-   *   }),
-   * )
+   * let 结果 = await 实例.JSON模式(z.object({ result: z.string() }), { messages })
    * console.log(结果)
    */
   async JSON模式<形状 extends z.AnyZodObject | z.ZodUnion<any>>(
-    opt: 聊天选项,
     形状: 形状,
+    opt: 聊天选项,
     引导前缀?: string,
     最大重试次数: number = 5,
     当前重试次数: number = 0,
@@ -451,7 +437,7 @@ export class OpenAI实例 {
           throw new Error('生成AI消息出错')
         } else {
           await log.debug('未到达出错阈值, 将重试')
-          return this.JSON模式(opt, 形状, 引导前缀, 最大重试次数, 当前重试次数, 使用ai抢救, 调用id)
+          return this.JSON模式(形状, opt, 引导前缀, 最大重试次数, 当前重试次数, 使用ai抢救, 调用id)
         }
       }
 
@@ -465,6 +451,7 @@ export class OpenAI实例 {
         if (截取结果 === void 0) throw new Error('验证失败')
         结果 = (
           await this.JSON模式(
+            z.object({ json: z.string() }),
             {
               messages: [
                 {
@@ -473,7 +460,6 @@ export class OpenAI实例 {
                 },
               ],
             },
-            z.object({ json: z.string() }),
             '{"json":',
             0,
             0,
@@ -504,7 +490,7 @@ export class OpenAI实例 {
         throw new Error('生成AI消息出错')
       } else {
         await log.debug('未到达出错阈值, 将重试')
-        return this.JSON模式(opt, 形状, 引导前缀, 最大重试次数, 当前重试次数, 使用ai抢救, 调用id)
+        return this.JSON模式(形状, opt, 引导前缀, 最大重试次数, 当前重试次数, 使用ai抢救, 调用id)
       }
     }
     await log.debug('形状验证通过')
@@ -546,8 +532,8 @@ export class OpenAI实例 {
   ) {
     return async (最大重试次数: number = 5, 使用ai抢救: boolean = true): Promise<z.infer<输出类型描述>> => {
       let 调用结果 = await this.JSON模式(
-        { messages: 构造提示词, maxTokens: 选项?.最大长度 ?? 1024, stop: 选项?.停止字符串 ?? [] },
         输出数据描述,
+        { messages: 构造提示词, maxTokens: 选项?.最大长度 ?? 1024, stop: 选项?.停止字符串 ?? [] },
         选项?.引导前缀 ?? '{"',
         最大重试次数,
         0,
