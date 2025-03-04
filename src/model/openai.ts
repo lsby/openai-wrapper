@@ -35,7 +35,7 @@ export interface 计算嵌入选项 {
   dimensions?: number
 }
 export type 数据描述 = z.AnyZodObject | z.ZodUnion<any>
-export type 提问数据描述 = z.ZodString | z.ZodNumber | z.ZodBoolean | z.ZodEnum<[string, ...string[]]>
+export type 提问数据描述 = z.ZodTypeAny
 
 export class 嵌入 {
   static 半序列化(输入: 嵌入): number[] {
