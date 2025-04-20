@@ -34,7 +34,7 @@ export interface 计算嵌入选项 {
   input: string
   dimensions?: number
 }
-export type 数据描述 = z.AnyZodObject | z.ZodUnion<any>
+export type 数据描述 = z.AnyZodObject | z.ZodUnion<any> | z.ZodArray<数据描述>
 export type 提问数据描述 = z.ZodTypeAny
 
 export class 嵌入 {
@@ -382,7 +382,7 @@ export class OpenAI实例 {
    * let 结果 = await 实例.JSON模式(z.object({ result: z.string() }), { messages })
    * console.log(结果)
    */
-  async JSON模式<形状 extends z.AnyZodObject | z.ZodUnion<any>>(
+  async JSON模式<形状 extends 数据描述>(
     形状: 形状,
     opt: 聊天选项,
     引导前缀?: string,
