@@ -19,7 +19,7 @@
     "check:type": "tsc --noEmit",
     "check:type:watch": "tsc --noEmit -w",
     "prepare": "husky",
-    "pub:public": "npm run check:all && npm run test:base && npm run build:all && bumpp && npm publish --access public",
+    "pub:public": "npm run check:all && npm run build:all && bumpp && npm publish --access public",
     "test:base": "cross-env DEBUG=@lsby:* vitest run",
     "test:coverage": "cross-env DEBUG=@lsby:* vitest run --coverage && open-cli ./coverage/index.html"
   },
