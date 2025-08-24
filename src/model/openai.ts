@@ -10,6 +10,7 @@ import type {
 } from 'openai/resources/chat/completions'
 import prettier from 'prettier'
 import { z } from 'zod'
+import { zodToJsonSchema } from 'zod-to-json-schema'
 import { printNode, zodToTs } from 'zod-to-ts'
 import { Global } from '../global/global.js'
 
@@ -391,6 +392,7 @@ export class OpenAI实例 {
     使用ai抢救: boolean = true,
     调用id: string | null = null,
     启用json模式类型: boolean = false,
+    模式: 'zodToTs' | 'zodToJsonSchema' = 'zodToTs',
   ): Promise<z.infer<形状>> {
     if (调用id === null) 调用id = randomUUID()
 
@@ -398,17 +400,34 @@ export class OpenAI实例 {
     let log = (await this.log).extend(调用id).extend('JSON模式')
 
     await log.debug('开始调用: =============================')
-    let 完整提示词 = [
-      {
-        role: 'system' as const,
-        content: [
+
+    let 形状描述: string[] = []
+    switch (模式) {
+      case 'zodToTs':
+        形状描述 = [
           `你是一个有用的助手，你应该只输出一个JSON。期望的JSON形状是:`,
           '```json',
           `${printNode(zodToTs(形状).node).trim()}`,
           '```',
-          '',
-          ...opt.messages.filter((a) => a.role === 'system').map((a) => a.content),
-        ].join('\n'),
+        ]
+        break
+      case 'zodToJsonSchema': {
+        形状描述 = [
+          `你是一个有用的助手，你应该只输出一个JSON。期望的格式用JsonSchema描述是:`,
+          '```json',
+          `${JSON.stringify(zodToJsonSchema(形状, 'schema')).trim()}`,
+          '```',
+        ]
+        break
+      }
+      default: {
+        let _类型检查: never = 模式
+      }
+    }
+    let 完整提示词 = [
+      {
+        role: 'system' as const,
+        content: [...形状描述, '', ...opt.messages.filter((a) => a.role === 'system').map((a) => a.content)].join('\n'),
       },
       ...opt.messages.filter((a) => a.role !== 'system'),
       引导前缀或空 !== null ? { role: 'assistant' as const, content: 引导前缀或空 } : null,

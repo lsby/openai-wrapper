@@ -29,6 +29,7 @@
     "cross-env": "^7.0.3",
     "jsonrepair": "^3.12.0",
     "openai": "^4.86.1",
+    "zod-to-json-schema": "^3.24.6",
     "zod-to-ts": "^1.2.0"
   },
   "devDependencies": {
