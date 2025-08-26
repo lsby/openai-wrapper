@@ -116,6 +116,7 @@ export class 嵌入 {
 export class OpenAI流式调用 {
   private openai: OpenAILib
   private 停止: boolean = false
+  private abortController: AbortController | null = null
   private log = Global.getItem('log').then((a) => a.extend('OpenAI流式调用'))
 
   constructor(
@@ -132,6 +133,7 @@ export class OpenAI流式调用 {
 
   async 开始流式调用(opt: 聊天选项, cb: (a: string) => Promise<void>): Promise<void> {
     this.停止 = false
+    this.abortController = new AbortController()
 
     let log = (await this.log).extend(this.taskId).extend('启动聊天任务')
 
@@ -139,11 +141,16 @@ export class OpenAI流式调用 {
     await log.debug('任务 ID: %o, 请求参数: %o', this.taskId, opt)
 
     try {
-      let response = await this.openai.chat.completions.create({
-        ...opt,
-        model: this.AI_MODEL,
-        stream: true,
-      })
+      let response = await this.openai.chat.completions.create(
+        {
+          ...opt,
+          model: this.AI_MODEL,
+          stream: true,
+        },
+        {
+          signal: this.abortController.signal,
+        },
+      )
 
       await log.info('开始接收流数据...')
 
@@ -153,7 +160,6 @@ export class OpenAI流式调用 {
           await log.warn('任务 %o 被中止', this.taskId)
           break
         }
-
         let content = chunk.choices[0]?.delta?.content ?? null
         if (content !== null) {
           await cb(content)
@@ -162,14 +168,23 @@ export class OpenAI流式调用 {
 
       await log.info('聊天任务流结束')
     } catch (error) {
-      await log.error('发生错误: %o', error)
+      if ((error as any).name === 'AbortError') {
+        await log.warn('任务 %o 已被取消 (AbortController)', this.taskId)
+      } else {
+        await log.error('任务 %o 发生错误: %o', this.taskId, error)
+      }
     } finally {
       this.停止 = true
+      this.abortController = null
       await log.debug('任务已停止，清理资源')
     }
   }
+
   async 中断流式调用(): Promise<void> {
     this.停止 = true
+    if (this.abortController !== null) {
+      this.abortController.abort()
+    }
   }
 }
 
