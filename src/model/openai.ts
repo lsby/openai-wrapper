@@ -172,6 +172,7 @@ export class OpenAI流式调用 {
         await log.warn('任务 %o 已被取消 (AbortController)', this.taskId)
       } else {
         await log.error('任务 %o 发生错误: %o', this.taskId, error)
+        throw error
       }
     } finally {
       this.停止 = true
