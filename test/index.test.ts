@@ -16,7 +16,7 @@ let messages: ChatCompletionMessageParam[] = [
 describe('流式调用', async function () {
   test('开始流式调用', async () => {
     let 管理器 = new OpenAI管理器()
-    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
     let 流式调用 = await 实例.创建流式调用(randomUUID())
     let 最终结果 = ''
     await 流式调用.开始流式调用({ messages: messages }, async (data) => {
@@ -27,7 +27,7 @@ describe('流式调用', async function () {
   })
   test('中断流式调用', async () => {
     let 管理器 = new OpenAI管理器()
-    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
     let 流式调用 = await 实例.创建流式调用(randomUUID())
     await 流式调用.开始流式调用({ messages: messages }, async (data) => {
       console.log(data)
@@ -38,28 +38,28 @@ describe('流式调用', async function () {
 
 test('阻塞调用', async () => {
   let 管理器 = new OpenAI管理器()
-  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
   let 结果 = await 实例.调用({ messages: messages })
   console.log(结果)
 })
 
 test('可控调用', async () => {
   let 管理器 = new OpenAI管理器()
-  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
   let 结果 = await 实例.可控调用(z.object({ result: z.string() }), messages)
   console.log(结果)
 })
 
 test('提问', async () => {
   let 管理器 = new OpenAI管理器()
-  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
   let 结果 = await 实例.提问(z.enum(['1大', '2大']), [{ role: 'user', content: '1和2谁大' }])
   console.log(结果)
 })
 
 test('函数调用', async function () {
   let 管理器 = new OpenAI管理器()
-  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
   let 结果 = await 实例.函数调用({
     messages: [{ role: 'user', content: "What's the weather like in Paris today?" }],
     tools: [
@@ -84,7 +84,7 @@ test('函数调用', async function () {
 
 test('结构化输出', async function () {
   let 管理器 = new OpenAI管理器()
-  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
   let 结果 = await 实例.结构化输出(
     z.object({
       steps: z.array(
@@ -108,8 +108,13 @@ test('结构化输出', async function () {
 
 test('JSON模式', async function () {
   let 管理器 = new OpenAI管理器()
-  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
-  let 结果 = await 实例.JSON模式(z.object({ result: z.string() }), { messages })
+  let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
+  let 结果 = await 实例.JSON模式(z.object({ result: z.string() }), {
+    messages,
+    回调函数: async (data) => {
+      console.log(data)
+    },
+  })
   console.log(结果)
 })
 
@@ -118,7 +123,7 @@ test('计算嵌入', async function () {
   let 实例 = await 管理器.添加实例(
     randomUUID(),
     '',
-    'http://127.0.0.1:8000/v1',
+    'http://127.0.0.1:5000/v1',
     'text-embedding-nomic-embed-text-v1.5@q8_0',
   )
   let 结果1 = await 实例.计算嵌入({ input: '你好' })
@@ -141,19 +146,34 @@ describe('生成AI函数', async function () {
 
   test('简单AI函数', async function () {
     let 管理器 = new OpenAI管理器()
-    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
     let 总结函数 = (输入: string): ((最大重试次数?: number, 使用ai抢救?: boolean) => Promise<{ result: string }>) =>
-      实例.生成简单AI函数(z.object({ result: z.string() }), [{ role: 'user', content: `请将这段话进行总结: ${输入}` }])
-    console.log(await 总结函数(输入文本)())
+      实例.生成简单AI函数(
+        z.object({ result: z.string() }),
+        [{ role: 'user', content: `请将这段话进行总结: ${输入}` }],
+        {
+          回调函数: async (data) => {
+            console.log(data)
+          },
+        },
+      )
+    let 结果 = await 总结函数(输入文本)()
+    console.log(结果)
   })
   test('完整AI函数', async function () {
     let 管理器 = new OpenAI管理器()
-    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:8000/v1', 'gemma-2-27b-it')
+    let 实例 = await 管理器.添加实例(randomUUID(), '', 'http://127.0.0.1:5000/v1', 'gemma-2-27b-it')
     let 总结函数 = 实例.生成完整AI函数(
       z.object({ inputText: z.string() }),
       z.object({ result: z.string() }),
       (参数) => [{ role: 'user', content: `请将这段话进行总结: ${参数.inputText}` }],
+      {
+        回调函数: async (data) => {
+          console.log(data)
+        },
+      },
     )
-    console.log(await 总结函数({ inputText: 输入文本 }))
+    let 结果 = await 总结函数({ inputText: 输入文本 })
+    console.log(结果)
   })
 })

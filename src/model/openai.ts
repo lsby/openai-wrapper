@@ -3,7 +3,6 @@ import { jsonrepair } from 'jsonrepair'
 import OpenAILib from 'openai'
 import { zodResponseFormat } from 'openai/helpers/zod'
 import type {
-  ChatCompletionCreateParamsNonStreaming,
   ChatCompletionMessageParam,
   ChatCompletionTool,
   ChatCompletionToolChoiceOption,
@@ -34,6 +33,16 @@ export interface 函数调用选项 {
 export interface 计算嵌入选项 {
   input: string
   dimensions?: number
+}
+export interface JSON模式选项 extends 聊天选项 {
+  引导前缀?: string
+  最大重试次数?: number
+  当前重试次数?: number
+  使用ai抢救?: boolean
+  调用id?: string
+  启用json模式类型?: boolean
+  模式?: 'zodToTs' | 'zodToJsonSchema'
+  回调函数?: ((数据: string) => Promise<void> | void) | undefined
 }
 export type 数据描述 = z.AnyZodObject | z.ZodUnion<any> | z.ZodArray<数据描述>
 export type 提问数据描述 = z.ZodTypeAny
@@ -399,18 +408,17 @@ export class OpenAI实例 {
    * let 结果 = await 实例.JSON模式(z.object({ result: z.string() }), { messages })
    * console.log(结果)
    */
-  async JSON模式<形状 extends 数据描述>(
-    形状: 形状,
-    opt: 聊天选项,
-    引导前缀?: string,
-    最大重试次数: number = 5,
-    当前重试次数: number = 0,
-    使用ai抢救: boolean = true,
-    调用id: string | null = null,
-    启用json模式类型: boolean = false,
-    模式: 'zodToTs' | 'zodToJsonSchema' = 'zodToTs',
-  ): Promise<z.infer<形状>> {
-    if (调用id === null) 调用id = randomUUID()
+  async JSON模式<形状 extends 数据描述>(形状: 形状, 选项: JSON模式选项): Promise<z.infer<形状>> {
+    let {
+      引导前缀,
+      最大重试次数 = 5,
+      当前重试次数 = 0,
+      使用ai抢救 = true,
+      调用id = randomUUID(),
+      启用json模式类型 = false,
+      模式 = 'zodToTs',
+      回调函数,
+    } = 选项
 
     let 引导前缀或空 = 引导前缀 ?? null
     let log = (await this.log).extend(调用id).extend('JSON模式')
@@ -443,9 +451,11 @@ export class OpenAI实例 {
     let 完整提示词 = [
       {
         role: 'system' as const,
-        content: [...形状描述, '', ...opt.messages.filter((a) => a.role === 'system').map((a) => a.content)].join('\n'),
+        content: [...形状描述, '', ...选项.messages.filter((a) => a.role === 'system').map((a) => a.content)].join(
+          '\n',
+        ),
       },
-      ...opt.messages.filter((a) => a.role !== 'system'),
+      ...选项.messages.filter((a) => a.role !== 'system'),
       引导前缀或空 !== null ? { role: 'assistant' as const, content: 引导前缀或空 } : null,
     ].flatMap((a) => (a === null ? [] : [a]))
     await log.debug('提示词: %o', 完整提示词)
@@ -453,10 +463,12 @@ export class OpenAI实例 {
     let 结果 = (
       await this._JSON模式(
         {
-          ...opt,
+          ...选项,
           messages: 完整提示词,
         },
         启用json模式类型,
+        调用id,
+        回调函数,
       )
     ).trim()
     if (引导前缀或空 !== null && 结果.startsWith(引导前缀或空) === false) 结果 = 引导前缀或空 + 结果
@@ -472,7 +484,7 @@ export class OpenAI实例 {
           throw new Error('生成AI消息出错')
         } else {
           await log.debug('未到达出错阈值, 将重试')
-          return this.JSON模式(形状, opt, 引导前缀, 最大重试次数, 当前重试次数, 使用ai抢救, 调用id)
+          return this.JSON模式(形状, { ...选项, 当前重试次数 })
         }
       }
 
@@ -485,23 +497,19 @@ export class OpenAI实例 {
         await log.debug('截取结果: %o', 截取结果)
         if (截取结果 === void 0) throw new Error('验证失败')
         结果 = (
-          await this.JSON模式(
-            z.object({ json: z.string() }),
-            {
-              messages: [
-                {
-                  role: 'user',
-                  content: `看一下这段字符串:\n\n\`\`\`\n${截取结果}\n\`\`\`\n\n它应该是一段json, 但出现了一个错误: ${json验证.error}\n\n请你帮我修复这个json.`,
-                },
-              ],
-            },
-            '{"json":',
-            0,
-            0,
-            false,
-            null,
+          await this.JSON模式(z.object({ json: z.string() }), {
+            messages: [
+              {
+                role: 'user',
+                content: `看一下这段字符串:\n\n\`\`\`\n${截取结果}\n\`\`\`\n\n它应该是一段json, 但出现了一个错误: ${json验证.error}\n\n请你帮我修复这个json.`,
+              },
+            ],
+            引导前缀: '{"json":',
+            最大重试次数: 0,
+            当前重试次数: 0,
+            使用ai抢救: false,
             启用json模式类型,
-          )
+          })
         ).json
 
         await log.debug('AI抢救后字符串: %o', 结果)
@@ -525,7 +533,7 @@ export class OpenAI实例 {
         throw new Error('生成AI消息出错')
       } else {
         await log.debug('未到达出错阈值, 将重试')
-        return this.JSON模式(形状, opt, 引导前缀, 最大重试次数, 当前重试次数, 使用ai抢救, 调用id)
+        return this.JSON模式(形状, { ...选项, 当前重试次数 })
       }
     }
     await log.debug('形状验证通过')
@@ -563,17 +571,20 @@ export class OpenAI实例 {
       引导前缀?: string | undefined
       最大长度?: number | undefined
       停止字符串?: string[] | undefined
+      回调函数?: ((数据: string) => Promise<void> | void) | undefined
     },
   ) {
     return async (最大重试次数: number = 5, 使用ai抢救: boolean = true): Promise<z.infer<输出类型描述>> => {
-      let 调用结果 = await this.JSON模式(
-        输出数据描述,
-        { messages: 构造提示词, maxTokens: 选项?.最大长度 ?? 1024, stop: 选项?.停止字符串 ?? [] },
-        选项?.引导前缀 ?? '{"',
+      let 调用结果 = await this.JSON模式(输出数据描述, {
+        messages: 构造提示词,
+        maxTokens: 选项?.最大长度 ?? 1024,
+        stop: 选项?.停止字符串 ?? [],
+        引导前缀: 选项?.引导前缀 ?? '{"',
         最大重试次数,
-        0,
+        当前重试次数: 0,
         使用ai抢救,
-      )
+        回调函数: 选项?.回调函数,
+      })
       return 调用结果
     }
   }
@@ -596,6 +607,7 @@ export class OpenAI实例 {
       引导前缀?: (输入: z.infer<输入类型描述>) => string | undefined
       最大长度?: number | undefined
       停止字符串?: string[] | undefined
+      回调函数?: ((数据: string) => Promise<void> | void) | undefined
     },
   ) {
     return async (
@@ -603,25 +615,35 @@ export class OpenAI实例 {
       最大重试次数: number = 5,
       使用ai抢救: boolean = true,
     ): Promise<z.infer<输出类型描述>> => {
-      return this.生成简单AI函数(输出数据描述, 构造提示词(输入), { ...选项, 引导前缀: 选项?.引导前缀?.(输入) })(
-        最大重试次数,
-        使用ai抢救,
-      )
+      return this.生成简单AI函数(输出数据描述, 构造提示词(输入), {
+        ...选项,
+        引导前缀: 选项?.引导前缀?.(输入),
+        回调函数: 选项?.回调函数,
+      })(最大重试次数, 使用ai抢救)
     }
   }
 
-  private async _JSON模式(opt: 聊天选项, typeEnable: boolean): Promise<string> {
-    let 参数: ChatCompletionCreateParamsNonStreaming = {
+  private async _JSON模式(
+    opt: 聊天选项,
+    typeEnable: boolean,
+    调用id: string,
+    cb?: (data: string) => Promise<void> | void,
+  ): Promise<string> {
+    let 参数: 聊天选项 & { response_format?: { type: 'json_object' } } = {
       ...opt,
-      model: this.AI_MODEL,
     }
     if (typeEnable === true) {
       参数.response_format = { type: 'json_object' }
     }
-    let response = await this.openai.chat.completions.create(参数)
 
-    let 结果 = response.choices[0]?.message.content ?? null
-    if (结果 === null) throw new Error('JSON模式调用失败')
+    let 流式调用 = new OpenAI流式调用(调用id, this.AI_KEY, this.AI_BASE_URL, this.AI_MODEL)
+    let 结果 = ''
+    await 流式调用.开始流式调用(参数, async (data) => {
+      结果 += data
+      if (cb !== void 0) await cb(data)
+    })
+
+    if (结果 === '') throw new Error('JSON模式调用失败')
 
     return 结果
   }

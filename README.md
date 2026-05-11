@@ -183,11 +183,16 @@ console.log(结果) // { name: '张三', age: 30, email: 'zhangsan@example.com',
 // 支持自定义参数
 const 结果2 = await 实例.JSON模式(
   用户信息,
-  { messages: [...] },
-  '{"name": "',  // 引导前缀
-  5,             // 最大重试次数
-  0,             // 当前重试次数（一般不需要手动设置）
-  true,          // 是否启用AI智能修复机制
+  {
+    messages: [...],
+    引导前缀: '{"name": "', // 引导前缀
+    最大重试次数: 5, // 最大重试次数
+    使用ai抢救: true, // 是否启用AI智能修复机制
+    回调函数: async (data) => {
+      // 通过回调函数实时接收AI生成的JSON片段，实现流式输出
+      process.stdout.write(data)
+    },
+  },
 )
 ```
 
@@ -235,21 +240,21 @@ const 曼距 = 嵌入对象.曼哈顿距离(嵌入2)
 // JSON模式默认启用AI智能修复机制
 const 结果 = await 实例.JSON模式(
   z.object({ answer: z.string() }),
-  { messages: [{ role: 'user', content: '你是谁' }] },
-  undefined,  // 引导前缀
-  5,          // 最大重试次数
-  0,          // 当前重试次数
-  true,       // 启用AI智能修复机制 ← 默认为true
+  {
+    messages: [{ role: 'user', content: '你是谁' }],
+    最大重试次数: 5,
+    使用ai抢救: true, // 启用AI智能修复机制 ← 默认为true
+  },
 )
 
 // 禁用AI智能修复机制（仅使用自动修复）
 const 结果2 = await 实例.JSON模式(
   z.object({ answer: z.string() }),
-  { messages: [...] },
-  undefined,
-  5,
-  0,
-  false,  // 禁用AI智能修复
+  {
+    messages: [...],
+    最大重试次数: 5,
+    使用ai抢救: false, // 禁用AI智能修复
+  },
 )
 ```
 
